@@ -1,4 +1,4 @@
-# FastAPI App
+# Python-game - TicTacToe
 ## Requirements
 Install dependencies from the existing `requirements.txt` file:
 ```
