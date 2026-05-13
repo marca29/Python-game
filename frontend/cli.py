@@ -4,7 +4,6 @@ import time
 SERVER_IP = input("Enter server IP address: ").strip()
 BASE = f"http://{SERVER_IP}:8000"
 
-
 def draw_board(board):
     def val(x, i):
         return x if x else str(i)
@@ -128,6 +127,7 @@ while True:
 
             print(f"Match created!")
             print(f"Match ID: {match['id']}")
+            print("Waiting for opponent to join...")
 
             while True:
                 current = fetch_match(match["id"])

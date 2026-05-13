@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 from models import Player, Move
 from state import state_manager
 from game import check_winner
@@ -15,42 +15,74 @@ def create_player(player: Player):
     state_manager.save()
     return {"ok": True}
 
-@router.post("/startMatch")
-def start_match(players: list[str]):
+@router.post("/startMatch")   
+def start_match(player_name: str = Query(...)):
     s = state_manager.state
 
-    if len(players) != 2:
-        raise HTTPException(400, "Need 2 players")
-
-    if players[0] == players[1]:
-        raise HTTPException(400, "Players must be different")
-
-    for p in players:
-        if p not in s["players"]:
-            raise HTTPException(404, f"Player {p} not found")
-
-    match_id = len(s["matches"])
+    if player_name not in s["players"]:
+        raise HTTPException(404, "Player does not exist")
 
     match = {
-        "id": match_id,
-        "board": [""] * 9,
-        "players": players,
-        "current_player": players[0],
+        "id": len(s["matches"]),
+        "board": ["", "", "", "", "", "", "", "", ""],
+        "players": [player_name],
+        "current_player": player_name,
         "winner": None,
-        "is_draw": False
+        "is_draw": False,
+        "started": False,
     }
 
     s["matches"].append(match)
     state_manager.save()
+
     return match
+
+@router.post("/joinMatch")
+def join_match(match_id: int = Query(...), player_name: str = Query(...)):
+    s = state_manager.state
+
+    try:
+        match = s["matches"][match_id]
+    except:
+        raise HTTPException(404, "Match not found")
+
+    if player_name not in s["players"]:
+        raise HTTPException(404, "Player does not exist")
+
+    if len(match["players"]) >= 2:
+        raise HTTPException(400, "Match already full")
+
+    if player_name in match["players"]:
+        raise HTTPException(400, "Player already in match")
+
+    match["players"].append(player_name)
+    
+    match["started"] = True
+
+    state_manager.save()
+
+    return {
+        "message": f"{player_name} joined the match",
+        "match": match,
+    }
 
 @router.post("/updateMatch")
 def update_match(move: Move):
     s = state_manager.state
+
     try:
         match = s["matches"][move.match_id]
     except:
         raise HTTPException(404, "Match not found")
+
+    if match["winner"] or match["is_draw"]:
+        raise HTTPException(400, "Match already finished")
+
+    if move.player != match["current_player"]:
+        raise HTTPException(400, "Not your turn")
+
+    if move.player not in match["players"]:
+        raise HTTPException(400, "Player is not part of this match")
 
     if move.position < 0 or move.position > 8:
         raise HTTPException(400, "Position must be 0-8")
@@ -58,23 +90,25 @@ def update_match(move: Move):
     if match["board"][move.position]:
         raise HTTPException(400, "Invalid move")
 
-    symbol = "X" if match["current_player"] == match["players"][0] else "O"
+    symbol = "X" if move.player == match["players"][0] else "O"
     match["board"][move.position] = symbol
-
     result = check_winner(match["board"])
 
     if result == "draw":
         match["is_draw"] = True
+
         for p in match["players"]:
             state_manager.state["statistics"][p]["draws"] += 1
+
     elif result:
-        winner = match["current_player"]
+        winner = move.player
         loser = [p for p in match["players"] if p != winner][0]
 
         match["winner"] = winner
 
         state_manager.state["statistics"][winner]["wins"] += 1
         state_manager.state["statistics"][loser]["losses"] += 1
+
     else:
         match["current_player"] = (
             match["players"][1]
@@ -85,7 +119,6 @@ def update_match(move: Move):
     state_manager.save()
     return match
 
-from fastapi import HTTPException
 
 @router.delete("/deletePlayer")
 def delete_player(name: str):
@@ -114,3 +147,12 @@ def delete_player(name: str):
 @router.get("/state")
 def get_state():
     return state_manager.state
+
+@router.get("/match/{match_id}")
+def get_match(match_id: int):
+    s = state_manager.state
+
+    if match_id < 0 or match_id >= len(s["matches"]):
+        raise HTTPException(404, "Match not found")
+
+    return s["matches"][match_id]
