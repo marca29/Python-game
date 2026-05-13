@@ -91,7 +91,7 @@ def play_match(match_id, player_name):
             continue
 
 def menu():
-    print("\n=== TIC TAC TOE CLI ===")
+    print("\n=== TIC TAC TOE ===")
     print("1. Create player")
     print("2. Start match")
     print("3. Join existing match")
