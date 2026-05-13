@@ -4,7 +4,6 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATE_FILE = os.path.join(BASE_DIR, "storage.json")
 
-
 class StateManager:
     def __init__(self):
         self.state = {
@@ -33,6 +32,5 @@ class StateManager:
     def save(self):
         with open(STATE_FILE, "w") as f:
             json.dump(self.state, f, indent=2)
-
 
 state_manager = StateManager()
