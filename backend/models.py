@@ -7,6 +7,7 @@ class Player(BaseModel):
 class Move(BaseModel):
     match_id: int
     position: int
+    player: str
 
 class Match(BaseModel):
     id: int
