@@ -152,7 +152,7 @@ def get_state():
 def get_match(match_id: int):
     s = state_manager.state
 
-    if match_id < 0 or match_id >= len(s["matches"]):
-        raise HTTPException(404, "Match not found")
-
-    return s["matches"][match_id]
+    try:
+        return s["matches"][match_id]
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Match not found")
